@@ -1,6 +1,7 @@
 import click
-from . import machine
-from . import configure
+from .machine import this as machine
+from .configure import this as configure
+from .hardware import this as hardware
 from .config import Configuration
 import libvirt
 
@@ -19,8 +20,9 @@ def cli(ctx, **kwargs):
         click.echo("Missing KVM_URI")
         ctx.abort()
 
-cli.add_command(machine.this)
-cli.add_command(configure.this)
+cli.add_command(machine)
+machine.add_command(hardware)
+cli.add_command(configure)
 
 if __name__ == '__main__':
     cli()

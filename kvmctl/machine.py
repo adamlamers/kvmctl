@@ -108,6 +108,38 @@ def stop(ctx, name, force):
 
 @this.command()
 @click.argument('name', type=click.STRING)
+@click.pass_context
+def pause(ctx, name):
+    conn = ctx.obj['kvm']
+
+    vm = conn.lookupByName(name)
+
+    state, _, _, _, _ = vm.info()
+
+    if state == libvirt.VIR_DOMAIN_SHUTOFF:
+        click.echo("Cannot save VM that is not running.")
+        sys.exit(1)
+
+    if vm.save('/kvm/saves/{}.img'.format(name)) < 0:
+        click.echo("Unable to save vm state.")
+        sys.exit(1)
+
+    click.echo("State saved.")
+
+@this.command()
+@click.argument('name', type=click.STRING)
+@click.pass_context
+def resume(ctx, name):
+    conn = ctx.obj['kvm']
+
+    id = conn.restore('/kvm/saves/{}.img'.format(name))
+    if id < 0:
+        click.echo("Could not restore VM.")
+
+    click.echo("State saved.")
+
+@this.command()
+@click.argument('name', type=click.STRING)
 @click.option('--quiet', '-q', is_flag=True)
 @click.pass_context
 def state(ctx, name, quiet):
@@ -131,6 +163,17 @@ def autostart(ctx, name, disable):
     vm = conn.lookupByName(name)
 
     if disable:
-        pass
+        if vm.autostart() == 0:
+            click.echo("{} autostart already disabled.".format(name))
+            return
 
-    click.echo(disable)
+        vm.setAutostart(0)
+        click.echo("{} autostart disabled.".format(name))
+        return
+
+    if vm.autostart() == 1:
+        click.echo("{} autostart already enabled.".format(name))
+        return
+
+    vm.setAutostart(1)
+    click.echo("{} autostart enabled.".format(name))
